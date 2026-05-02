@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@editorjs/editorjs": "^2.31.6",
     "@types/node": "^25.6.0",
     "typescript": "~6.0.2",
     "unplugin-dts": "^1.0.0",
