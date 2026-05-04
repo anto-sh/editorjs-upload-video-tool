@@ -1,16 +1,18 @@
 import { resolve } from "path";
 import { defineConfig } from "vite";
 import dts from "unplugin-dts/vite";
+import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
 
 const packageName = "packageName";
 
 export default defineConfig({
   plugins: [
+    cssInjectedByJsPlugin(),
     dts({
+      exclude: ["src/example.ts"],
+      entryRoot: "src",
       outDirs: [
         "dist", // default .d.ts
-        { dir: "dist/cjs", moduleFormat: "cjs" }, // .d.cts
-        { dir: "dist/esm", moduleFormat: "esm" }, // .d.mts
       ],
     }),
   ],
