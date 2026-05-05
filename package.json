@@ -12,6 +12,11 @@
     "name": "anto-sh",
     "email": "tomatomoving@mail.ru"
   },
+  "homepage": "https://github.com/anto-sh/editorjs-upload-video-tool#readme",
+  "bugs": {
+    "url": "https://github.com/anto-sh/editorjs-upload-video-tool/issues",
+    "email": "tomatomoving@mail.ru"
+  },
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -27,6 +32,10 @@
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anto-sh/editorjs-upload-video-tool.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
