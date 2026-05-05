@@ -9,7 +9,7 @@ const editor = new EditorJS({
       // type hack cause i don't have a better solution yet.
       class: UploadVideo as BlockToolConstructable,
       config: {
-        uploader: (): Promise<{ url: string }> =>
+        uploader: (file: File): Promise<{ url: string }> =>
           new Promise((resolve) => resolve({ url: "src/assets/example.mp4" })),
         errorHandler: (error: Error) => {
           console.log(error);

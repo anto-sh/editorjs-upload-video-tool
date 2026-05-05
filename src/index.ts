@@ -149,15 +149,21 @@ export default class UploadVideo implements BlockTool {
     video.style.maxWidth = "100%";
     video.style.display = "block";
 
-    const caption = document.createElement("input");
-    caption.type = "text";
+    let caption;
+    if (this.readOnly) {
+      caption = document.createElement("div");
+      caption.innerHTML = this.data.caption ?? "";
+    } else {
+      caption = document.createElement("input");
+      caption.type = "text";
+      caption.placeholder = this.api.i18n.t(
+        this.config.videoCaptionPlaceholder || "Caption for video",
+      );
+      caption.value = this.data.caption ?? "";
+    }
     caption.id = "caption";
     caption.classList.add(this.api.styles.input);
-    caption.classList.add("upload-video__upload-btn");
-    caption.placeholder = this.api.i18n.t(
-      this.config.videoCaptionPlaceholder || "Caption for video",
-    );
-    caption.value = this.data.caption ?? "";
+    caption.classList.add("upload-video__caption");
 
     this.container.appendChild(video);
     this.container.appendChild(caption);
