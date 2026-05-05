@@ -1,7 +1,18 @@
 {
   "name": "editorjs-upload-video-tool",
-  "description": "Video Tool with the required custom uploader function for Editor.js ",
   "version": "1.0.0",
+  "description": "Video Tool with the required custom uploader function for Editor.js ",
+  "keywords": [
+    "editorjs",
+    "video",
+    "upload video",
+    "custom uploader"
+  ],
+  "author": {
+    "name": "anto-sh",
+    "email": "tomatomoving@mail.ru"
+  },
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -16,12 +27,6 @@
   "files": [
     "dist"
   ],
-  "keywords": [
-    "editorjs",
-    "video"
-  ],
-  "author": "anto-sh aka Anton Pozdeev",
-  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
