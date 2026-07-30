@@ -1,6 +1,6 @@
 {
   "name": "editorjs-upload-video-tool",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Video Tool with the required custom uploader function for Editor.js ",
   "keywords": [
     "editorjs",
@@ -43,11 +43,11 @@
   },
   "devDependencies": {
     "@editorjs/editorjs": "^2.31.6",
-    "@types/node": "^25.6.0",
-    "typescript": "~6.0.2",
-    "unplugin-dts": "^1.0.0",
-    "vite": "^8.0.10",
-    "vite-plugin-css-injected-by-js": "^5.0.1"
+    "@types/node": "^25.9.5",
+    "typescript": "~6.0.3",
+    "unplugin-dts": "^1.0.3",
+    "vite": "^8.2.0",
+    "vite-plugin-css-injected-by-js": "^5.0.2"
   },
   "dependencies": {
     "@codexteam/icons": "^0.3.3"
