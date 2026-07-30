@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@codexteam/icons':
+        specifier: ^0.3.3
+        version: 0.3.3
     devDependencies:
       '@editorjs/editorjs':
         specifier: ^2.31.6
@@ -28,6 +32,9 @@ importers:
         version: 5.0.1(vite@8.0.10(@types/node@25.6.0))
 
 packages:
+
+  '@codexteam/icons@0.3.3':
+    resolution: {integrity: sha512-cp7mkZPgmBuSxigTm3Vb+DtVHYeX7qXfQd7o05vcLD8Ag5WvRlol2QSn5P10k0CDAJwmkH9nQGQLBycErS9lsQ==}
 
   '@editorjs/caret@1.1.0':
     resolution: {integrity: sha512-dzUjrPV7mtqM0HR/7IwT1/1PfyMxUfe5MRXo9joFmBRDIcrQ5ikbqVxSL9+Hy5tQ+BUWBwqLUgX1UKTJylWW9Q==}
@@ -480,6 +487,8 @@ packages:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
 snapshots:
+
+  '@codexteam/icons@0.3.3': {}
 
   '@editorjs/caret@1.1.0':
     dependencies:

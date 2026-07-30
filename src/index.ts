@@ -5,11 +5,29 @@ import type {
   ToolConfig,
   BlockToolData,
   BlockTool,
+  BlockAPI,
 } from "@editorjs/editorjs";
+
+import {
+  IconAddBorder,
+  IconStretch,
+  IconAddBackground,
+  IconPlay,
+  IconLoader,
+  IconText,
+} from "@codexteam/icons";
+import type {
+  BlockToolConstructorOptions,
+  MenuConfig,
+} from "@editorjs/editorjs/types/tools";
 
 export interface UploadVideoData extends BlockToolData {
   url?: string;
   caption?: string;
+  withBorder?: boolean;
+  withBackground?: boolean;
+  stretched?: boolean;
+  withCaption?: boolean;
 }
 
 /**
@@ -26,42 +44,113 @@ export interface UploadVideoConfig extends ToolConfig {
   uploadFailedText?: string;
 }
 
-export default class UploadVideo implements BlockTool {
-  private data: UploadVideoData;
+type UploadVideoToolConstructorOptions = BlockToolConstructorOptions<
+  UploadVideoData,
+  UploadVideoConfig
+>;
+
+export default class UploadVideoTool implements BlockTool {
+  private _data: UploadVideoData;
   private config: UploadVideoConfig;
   private api: API;
   private container: HTMLDivElement | null = null;
   private readOnly: boolean;
+  private block: BlockAPI;
+
+  private containerClassName = "upload-video";
 
   constructor({
     data,
     config,
     api,
     readOnly,
-  }: {
-    data: UploadVideoData;
-    config: UploadVideoConfig;
-    api: API;
-    readOnly: boolean;
-  }) {
+    block,
+  }: UploadVideoToolConstructorOptions) {
+    this._data = {
+      url: "",
+      caption: "",
+      withBorder: false,
+      withBackground: false,
+      stretched: false,
+      withCaption: false,
+    };
     this.data = data;
-    this.config = config;
+    this.config = {
+      ...config,
+      uploader:
+        config?.uploader ||
+        (() => {
+          throw new Error("No uploader specified");
+        }),
+    };
     this.api = api;
     this.readOnly = readOnly;
+    this.block = block;
   }
 
+  /**
+   * Notify core that read-only mode is suppoorted
+   * @returns { boolean }
+   */
+  static get isReadOnlySupported() {
+    return true;
+  }
+
+  static get sanitize() {
+    return {
+      url: false,
+      caption: {},
+    };
+  }
+
+  /**
+   * Get Tool toolbox settings
+   * icon - Tool icon's SVG
+   * title - title to show in toolbox
+   */
   static get toolbox() {
     return {
       title: "Upload Video",
-      icon: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-            <path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm3 2l4 4-4 4h8V7H8z" fill="currentColor"/>
-            </svg>`,
+      icon: IconPlay,
     };
+  }
+
+  /**
+   * Available tools tunes
+   */
+  public static get tunes() {
+    return [
+      {
+        name: "withBorder",
+        icon: IconAddBorder,
+        title: "With border",
+        toggle: true,
+      },
+      {
+        name: "withBackground",
+        icon: IconAddBackground,
+        title: "With background",
+        toggle: true,
+      },
+      {
+        name: "stretched",
+        icon: IconStretch,
+        title: "Stretch image",
+        toggle: true,
+      },
+      {
+        name: "withCaption",
+        icon: IconText,
+        title: "With caption",
+        toggle: true,
+      },
+    ] as const;
   }
 
   public render(): HTMLDivElement {
     this.container = document.createElement("div");
-    this.container.classList.add("upload-video");
+    this.container.classList.add(this.api.styles.block);
+    this.container.classList.add(this.containerClassName);
 
     if (this.data.url) {
       this._showVideo(this.data.url);
@@ -69,16 +158,20 @@ export default class UploadVideo implements BlockTool {
       this._showUploadButton();
     }
 
+    this._setAllTunesByData(this.data);
+
     return this.container;
   }
 
   public save(blockContent: HTMLDivElement): UploadVideoData {
     return {
-      url: blockContent?.querySelector("video")?.src,
-      caption:
-        (
-          blockContent?.querySelector("#caption") as HTMLInputElement
-        )?.value.trim() || undefined,
+      ...this.data,
+      url: blockContent?.querySelector("video")?.src.trim(),
+      caption: this.data.withCaption
+        ? blockContent
+            ?.querySelector<HTMLDivElement>("#caption")
+            ?.innerHTML.trim() || undefined
+        : undefined,
     };
   }
 
@@ -86,22 +179,62 @@ export default class UploadVideo implements BlockTool {
     if (!savedData.url) {
       return false;
     }
-
     return true;
+  }
+
+  public renderSettings(): MenuConfig {
+    /**
+     * Check if the tune is active
+     * @param tune - tune to check
+     */
+    const isActive = (tuneName: keyof UploadVideoData): boolean => {
+      return this.data[tuneName] as boolean;
+    };
+
+    const fullWeightTunes = UploadVideoTool.tunes.map((t) => ({
+      ...t,
+      isActive: isActive(t.name),
+      onActivate: () => this._setTune(t.name, !isActive(t.name)),
+    }));
+
+    return fullWeightTunes;
+  }
+
+  /**
+   * Stores all Tool's data
+   * @param data - data in Image Tool format
+   */
+  private set data(data: UploadVideoData) {
+    this._data.url = data.url;
+    this._data.caption = data.caption || "";
+
+    this._setAllTunesByData(data);
+  }
+
+  /**
+   * Return Tool data
+   */
+  private get data(): UploadVideoData {
+    return this._data;
   }
 
   private _showUploadButton(): void {
     if (!this.container) return;
+    const videoContainer = this._insertVideoContainer();
+    if (!videoContainer) return;
+
     this.container.innerHTML = "";
 
     const btn = document.createElement("div");
-    // btn.classList.add("upload-video__upload-btn");
+    btn.classList.add(`${this.containerClassName}__loader-btn`);
+    btn.classList.add(`${this.containerClassName}__upload-btn`);
     btn.textContent = this.api.i18n.t(
       this.config.uploadButtonText || "Upload Video",
     );
     btn.classList.add(this.api.styles.button);
     btn.addEventListener("click", () => this._triggerFileDialog());
 
+    this.container.appendChild(videoContainer);
     this.container.appendChild(btn);
   }
 
@@ -116,6 +249,8 @@ export default class UploadVideo implements BlockTool {
       if (!file) return;
 
       try {
+        this.container?.classList.add(`${this.containerClassName}--uploading`);
+
         const result = await this.config.uploader(file);
         if (!result?.url) {
           throw new Error(
@@ -129,9 +264,13 @@ export default class UploadVideo implements BlockTool {
       } catch (error) {
         if (this.config.errorHandler) this.config.errorHandler(error as Error);
         else {
-          console.log(error);
           alert(this.config.uploadFailedText || "Upload failed.");
+          throw error;
         }
+      } finally {
+        this.container?.classList.remove(
+          `${this.containerClassName}--uploading`,
+        );
       }
     };
 
@@ -140,40 +279,52 @@ export default class UploadVideo implements BlockTool {
 
   private _showVideo(url: string): void {
     if (!this.container) return;
+    const videoContainer = this._insertVideoContainer();
+    if (!videoContainer) return;
+
+    const prevCaptionText = document.querySelector<HTMLDivElement>(
+      `.${this.containerClassName}__caption`,
+    )?.innerHTML;
+
     this.container.innerHTML = "";
 
     const video = document.createElement("video");
     video.src = url;
     video.controls = true;
-    video.classList.add("upload-video__video");
-    video.style.maxWidth = "100%";
-    video.style.display = "block";
+    video.classList.add(`${this.containerClassName}__video`);
 
-    let caption;
-    if (this.readOnly) {
-      caption = document.createElement("div");
-      caption.innerHTML = this.data.caption ?? "";
-    } else {
-      caption = document.createElement("input");
-      caption.type = "text";
-      caption.placeholder = this.api.i18n.t(
-        this.config.videoCaptionPlaceholder || "Caption for video",
+    // Caption creation
+    const caption = document.createElement("div");
+    caption.innerHTML = prevCaptionText || this.data.caption || "";
+
+    if (!this.readOnly) {
+      caption.contentEditable = "true";
+      caption.setAttribute(
+        "data-placeholder",
+        this.api.i18n.t(
+          this.config.videoCaptionPlaceholder || "Caption for video",
+        ),
       );
-      caption.value = this.data.caption ?? "";
     }
+
     caption.id = "caption";
     caption.classList.add(this.api.styles.input);
-    caption.classList.add("upload-video__caption");
+    caption.classList.add(`${this.containerClassName}__caption`);
 
-    this.container.appendChild(video);
+    // Appending elements to container
+    videoContainer.appendChild(video);
+    this.container.appendChild(videoContainer);
     this.container.appendChild(caption);
 
+    // Change button
     if (!this.readOnly) {
       const changeBtn = document.createElement("div");
       changeBtn.textContent = this.api.i18n.t(
         this.config.changeVideoButtonText || "Change Video",
       );
-      // changeBtn.classList.add("upload-video__change-btn");
+
+      changeBtn.classList.add(`${this.containerClassName}__loader-btn`);
+      changeBtn.classList.add(`${this.containerClassName}__change-btn`);
       changeBtn.classList.add(this.api.styles.button);
       changeBtn.addEventListener("click", () => {
         this._triggerFileDialog();
@@ -182,18 +333,55 @@ export default class UploadVideo implements BlockTool {
     }
   }
 
-  static get sanitize() {
-    return {
-      url: false,
-      caption: false,
-    };
+  private _insertVideoContainer() {
+    if (!this.container) return;
+    const videoContainer = document.createElement("div");
+    videoContainer.classList.add(`${this.containerClassName}__video-container`);
+
+    // Loading indicator
+    const loadingIndicator = document.createElement("div");
+    loadingIndicator.classList.add(
+      `${this.containerClassName}__loading-indicator`,
+    );
+    loadingIndicator.innerHTML = IconLoader;
+
+    videoContainer.append(loadingIndicator);
+    this.container?.append(videoContainer);
+
+    return videoContainer;
   }
 
-  /**
-   * Notify core that read-only mode is suppoorted
-   * @returns {boolean}
-   */
-  static get isReadOnlySupported() {
-    return true;
+  private _setTune(tuneName: string, value: boolean) {
+    this.data[tuneName] = value;
+
+    this.container?.classList.toggle(
+      `${this.containerClassName}--${tuneName}`,
+      value,
+    );
+
+    if (tuneName === "stretched") {
+      /**
+       * Wait until the API is ready
+       */
+      Promise.resolve()
+        .then(() => {
+          this.block.stretched = value;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    }
+  }
+
+  private _setAllTunesByData(data: UploadVideoData) {
+    UploadVideoTool.tunes.forEach(({ name: tune }) => {
+      const value =
+        typeof data[tune as keyof UploadVideoTool] !== "undefined"
+          ? data[tune as keyof UploadVideoTool] === true ||
+            data[tune as keyof UploadVideoTool] === "true"
+          : false;
+
+      this._setTune(tune as keyof UploadVideoTool, value);
+    });
   }
 }

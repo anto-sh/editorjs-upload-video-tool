@@ -1,4 +1,108 @@
-.upload-video__caption {
-  margin-top: .5rem;
-  margin-bottom: 1rem;
+.upload-video {
+  --bg-color: #cdd1e0;
+  --front-color: #388ae5;
+  --border-color: #e8e8eb;
+
+  .upload-video__video {
+    position: relative;
+    display: block;
+    width: 100%;
+  }
+
+  .upload-video__video-container {
+    position: relative;
+    display: block;
+    z-index: 0;
+    max-width: 100%;
+    margin: 0 auto 10px;
+
+    .upload-video__loading-indicator {
+      z-index: 2;
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: var(--bg-color);
+      color: var(--front-color);
+
+      transition: opacity 0.5s;
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  .upload-video__caption {
+    display: none;
+    margin-bottom: 10px;
+
+    &[contentEditable="true"][data-placeholder]::before {
+      position: absolute !important;
+      content: attr(data-placeholder);
+      color: #707684;
+      font-weight: normal;
+      display: none;
+    }
+
+    &[contentEditable="true"][data-placeholder]:empty {
+      &::before {
+        display: block;
+      }
+
+      &:focus::before {
+        display: none;
+      }
+    }
+  }
+
+  &.upload-video--withBorder {
+    .upload-video__video-container {
+      border: 1px solid var(--border-color);
+    }
+  }
+
+  &.upload-video--withBackground {
+    .upload-video__video-container {
+      padding: 15px;
+      background: var(--bg-color);
+
+      .upload-video__video {
+        max-width: 60%;
+        margin: 0 auto;
+      }
+    }
+  }
+
+  &.upload-video--stretched {
+    .upload-video__video-container {
+      width: 100%;
+    }
+  }
+
+  &.upload-video--withCaption {
+    .upload-video__caption {
+      display: block;
+    }
+  }
+
+  &.upload-video--uploading {
+    .upload-video__video-container {
+      min-height: 200px;
+      border: 1px solid var(--border-color);
+
+      .upload-video__loader-btn {
+        visibility: hidden;
+      }
+
+      .upload-video__loading-indicator {
+        opacity: 1;
+        pointer-events: all;
+
+        svg {
+          width: 100px;
+          height: 100px;
+        }
+      }
+    }
+  }
 }
