@@ -44,6 +44,7 @@
   "devDependencies": {
     "@editorjs/editorjs": "^2.31.6",
     "@types/node": "^25.9.5",
+    "autoprefixer": "^10.5.4",
     "typescript": "~6.0.3",
     "unplugin-dts": "^1.0.3",
     "vite": "^8.2.0",
@@ -51,5 +52,10 @@
   },
   "dependencies": {
     "@codexteam/icons": "^0.3.3"
-  }
+  },
+  "browserslist": [
+    "> 0.2%",
+    "last 4 versions",
+    "not dead"
+  ]
 }
