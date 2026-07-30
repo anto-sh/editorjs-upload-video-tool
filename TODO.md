@@ -1,13 +1,16 @@
 # Issues
 
-# It'd be great to make that
+# It'd be great
 
-- [ ] Video display options (at least some of the: streched, border, contorls, autoplay, etc.)
+- [x] Video display tunes (at least some of the: streched, border)
+- [ ] Config options - contorls, autoplay, etc.
 - [ ] Error handler API
+- [ ] Poster tune with config option `allowPoster`
+- [ ] Caption length limit
 
 # Optional
 
-- [ ] Configuration for the options of upload files (type, multiple, etc.)
+- [x] Config option for the upload input accept value - `videoAcceptFormats`
 
 # Refactor
 
