@@ -1,6 +1,6 @@
 {
   "name": "editorjs-upload-video-tool",
-  "version": "1.0.3",
+  "version": "1.0.2",
   "description": "Video Tool with the required custom uploader function for Editor.js ",
   "keywords": [
     "editorjs",
