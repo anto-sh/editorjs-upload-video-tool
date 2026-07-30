@@ -21,7 +21,7 @@ import type {
   MenuConfig,
 } from "@editorjs/editorjs/types/tools";
 
-export interface UploadVideoData extends BlockToolData {
+export interface UploadVideoToolData extends BlockToolData {
   url?: string;
   caption?: string;
   withBorder?: boolean;
@@ -30,13 +30,21 @@ export interface UploadVideoData extends BlockToolData {
   withCaption?: boolean;
 }
 
+export type SupportedVideoFormats = "mp4" | "webm" | "ogg";
+// Video accept formats for <video> tag accept attribute
+export type VideoAcceptFormatItem =
+  | `video/${SupportedVideoFormats}`
+  | `.${SupportedVideoFormats}`;
+
 /**
  * Tool config.
  * uploader is a required function called when a file is selected.
  */
-export interface UploadVideoConfig extends ToolConfig {
+export interface UploadVideoToolConfig extends ToolConfig {
   uploader: (file: File) => Promise<{ url: string; [key: string]: any }>;
   errorHandler?: (e: Error) => void;
+  allowCaption: boolean;
+  videoAcceptFormats?: VideoAcceptFormatItem[];
   uploadButtonText?: string;
   changeVideoButtonText?: string;
   videoCaptionPlaceholder?: string;
@@ -45,13 +53,13 @@ export interface UploadVideoConfig extends ToolConfig {
 }
 
 type UploadVideoToolConstructorOptions = BlockToolConstructorOptions<
-  UploadVideoData,
-  UploadVideoConfig
+  UploadVideoToolData,
+  UploadVideoToolConfig
 >;
 
 export default class UploadVideoTool implements BlockTool {
-  private _data: UploadVideoData;
-  private config: UploadVideoConfig;
+  private _data: UploadVideoToolData;
+  private config: UploadVideoToolConfig;
   private api: API;
   private container: HTMLDivElement | null = null;
   private readOnly: boolean;
@@ -75,14 +83,18 @@ export default class UploadVideoTool implements BlockTool {
       withCaption: false,
     };
     this.data = data;
+
     this.config = {
       ...config,
       uploader:
         config?.uploader ||
         (() => {
-          throw new Error("No uploader specified");
+          throw new Error("No uploader specified!");
         }),
+      allowCaption:
+        typeof config?.allowCaption === "boolean" ? config.allowCaption : true,
     };
+
     this.api = api;
     this.readOnly = readOnly;
     this.block = block;
@@ -155,7 +167,7 @@ export default class UploadVideoTool implements BlockTool {
     if (this.data.url) {
       this._showVideo(this.data.url);
     } else {
-      this._showUploadButton();
+      if (!this.readOnly) this._showUploadButton();
     }
 
     this._setAllTunesByData(this.data);
@@ -163,7 +175,7 @@ export default class UploadVideoTool implements BlockTool {
     return this.container;
   }
 
-  public save(blockContent: HTMLDivElement): UploadVideoData {
+  public save(blockContent: HTMLDivElement): UploadVideoToolData {
     return {
       ...this.data,
       url: blockContent?.querySelector("video")?.src.trim(),
@@ -175,7 +187,7 @@ export default class UploadVideoTool implements BlockTool {
     };
   }
 
-  validate(savedData: UploadVideoData) {
+  validate(savedData: UploadVideoToolData) {
     if (!savedData.url) {
       return false;
     }
@@ -187,24 +199,29 @@ export default class UploadVideoTool implements BlockTool {
      * Check if the tune is active
      * @param tune - tune to check
      */
-    const isActive = (tuneName: keyof UploadVideoData): boolean => {
+    const isActive = (tuneName: keyof UploadVideoToolData): boolean => {
       return this.data[tuneName] as boolean;
     };
 
-    const fullWeightTunes = UploadVideoTool.tunes.map((t) => ({
+    const availableTunes = UploadVideoTool.tunes.filter((t) => {
+      if (t.name === "withCaption") return this.config.allowCaption;
+      return true;
+    });
+
+    const enrichedTunes = availableTunes.map((t) => ({
       ...t,
       isActive: isActive(t.name),
       onActivate: () => this._setTune(t.name, !isActive(t.name)),
     }));
 
-    return fullWeightTunes;
+    return enrichedTunes;
   }
 
   /**
    * Stores all Tool's data
    * @param data - data in Image Tool format
    */
-  private set data(data: UploadVideoData) {
+  private set data(data: UploadVideoToolData) {
     this._data.url = data.url;
     this._data.caption = data.caption || "";
 
@@ -214,14 +231,12 @@ export default class UploadVideoTool implements BlockTool {
   /**
    * Return Tool data
    */
-  private get data(): UploadVideoData {
+  private get data(): UploadVideoToolData {
     return this._data;
   }
 
   private _showUploadButton(): void {
     if (!this.container) return;
-    const videoContainer = this._insertVideoContainer();
-    if (!videoContainer) return;
 
     this.container.innerHTML = "";
 
@@ -234,24 +249,38 @@ export default class UploadVideoTool implements BlockTool {
     btn.classList.add(this.api.styles.button);
     btn.addEventListener("click", () => this._triggerFileDialog());
 
-    this.container.appendChild(videoContainer);
     this.container.appendChild(btn);
   }
 
   private _triggerFileDialog(): void {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "video/*";
+    input.accept =
+      this.config.videoAcceptFormats?.join(",") ||
+      "video/mp4, video/webm, video/ogg, .mp4, .webm, .ogg";
     input.multiple = false;
 
     input.onchange = async () => {
+      if (!this.container) return;
       const file = input.files?.[0];
       if (!file) return;
+
+      let newVideoContainer;
 
       try {
         this.container?.classList.add(`${this.containerClassName}--uploading`);
 
+        const oldVideoContainer = this.container.querySelector<HTMLDivElement>(
+          `.${this.containerClassName}__video-container`,
+        );
+        if (!oldVideoContainer) {
+          newVideoContainer = this._insertVideoContainer();
+          if (!newVideoContainer) throw new Error("No video container!");
+          this.container?.prepend(newVideoContainer);
+        }
+
         const result = await this.config.uploader(file);
+
         if (!result?.url) {
           throw new Error(
             this.api.i18n.t(
@@ -259,9 +288,11 @@ export default class UploadVideoTool implements BlockTool {
             ),
           );
         }
+
         this.data.url = result.url;
         this._showVideo(result.url);
       } catch (error) {
+        if (newVideoContainer) newVideoContainer.remove();
         if (this.config.errorHandler) this.config.errorHandler(error as Error);
         else {
           alert(this.config.uploadFailedText || "Upload failed.");
@@ -282,7 +313,7 @@ export default class UploadVideoTool implements BlockTool {
     const videoContainer = this._insertVideoContainer();
     if (!videoContainer) return;
 
-    const prevCaptionText = document.querySelector<HTMLDivElement>(
+    const prevCaptionText = this.container.querySelector<HTMLDivElement>(
       `.${this.containerClassName}__caption`,
     )?.innerHTML;
 
@@ -351,29 +382,37 @@ export default class UploadVideoTool implements BlockTool {
     return videoContainer;
   }
 
-  private _setTune(tuneName: string, value: boolean) {
-    this.data[tuneName] = value;
-
+  private _toggleTuneClass(
+    tuneName: keyof UploadVideoToolData,
+    value: boolean,
+  ) {
     this.container?.classList.toggle(
       `${this.containerClassName}--${tuneName}`,
       value,
     );
+  }
 
-    if (tuneName === "stretched") {
-      /**
-       * Wait until the API is ready
-       */
-      Promise.resolve()
-        .then(() => {
-          this.block.stretched = value;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
+  private _setTune(tuneName: keyof UploadVideoToolData, value: boolean) {
+    this.data[tuneName] = value;
+
+    if (tuneName === "withCaption") {
+      // Wait until the API is ready
+      queueMicrotask(() => {
+        if (this.config.allowCaption) this._toggleTuneClass(tuneName, value);
+      });
+    } else if (tuneName === "stretched") {
+      // Wait until the API is ready
+      queueMicrotask(() => {
+        if (this.config.allowCaption) this._toggleTuneClass(tuneName, value);
+        this.block.stretched = value;
+        this._toggleTuneClass(tuneName, value);
+      });
+    } else {
+      this._toggleTuneClass(tuneName, value);
     }
   }
 
-  private _setAllTunesByData(data: UploadVideoData) {
+  private _setAllTunesByData(data: UploadVideoToolData) {
     UploadVideoTool.tunes.forEach(({ name: tune }) => {
       const value =
         typeof data[tune as keyof UploadVideoTool] !== "undefined"

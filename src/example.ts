@@ -1,13 +1,13 @@
-import EditorJS, { type BlockToolConstructable } from "@editorjs/editorjs";
-import UploadVideoTool from ".";
+import EditorJS from "@editorjs/editorjs";
+import UploadVideoTool, { UploadVideoToolConfig } from ".";
 
 //@ts-ignore
 export const editor = new EditorJS({
   holder: "editorjs",
+  // readOnly: true,
   tools: {
     "upload-video": {
-      // type hack cause i don't have a better solution yet.
-      class: UploadVideoTool as BlockToolConstructable,
+      class: UploadVideoTool,
       inlineToolbar: true,
       config: {
         uploader: (file: File): Promise<{ url: string }> =>
@@ -24,7 +24,9 @@ export const editor = new EditorJS({
         videoCaptionPlaceholder: "Video caption, leave blank for no caption",
         uploaderReturnNoUrlText: "Uploader didn't do it's job",
         uploadFailedText: "Oh noooo, the upload failed(((",
-      },
+        videoAcceptFormats: ["video/mp4", ".ogg"],
+        allowCaption: true,
+      } as UploadVideoToolConfig,
     },
   },
   data: {
@@ -34,12 +36,12 @@ export const editor = new EditorJS({
         id: "hZAjSnqYMX",
         type: "upload-video",
         data: {
-          url: "src/assets/example.mp4",
+          // url: "src/assets/example.mp4",
           withBorder: true,
           withBackground: true,
           stretched: false,
           withCaption: true,
-          caption: "All your base are belong to us"
+          caption: "All your base are belong to us",
         },
       },
     ],
