@@ -147,7 +147,7 @@ export default class UploadVideoTool implements BlockTool {
       {
         name: "stretched",
         icon: IconStretch,
-        title: "Stretch image",
+        title: "Stretch video",
         toggle: true,
       },
       {
