@@ -43,7 +43,7 @@ export type VideoAcceptFormatItem =
 export interface UploadVideoToolConfig extends ToolConfig {
   uploader: (file: File) => Promise<{ url: string; [key: string]: any }>;
   errorHandler?: (e: Error) => void;
-  allowCaption: boolean;
+  allowCaption?: boolean;
   videoAcceptFormats?: VideoAcceptFormatItem[];
   uploadButtonText?: string;
   changeVideoButtonText?: string;
@@ -58,12 +58,19 @@ type UploadVideoToolConstructorOptions = BlockToolConstructorOptions<
 >;
 
 export default class UploadVideoTool implements BlockTool {
-  private _data: UploadVideoToolData;
   private config: UploadVideoToolConfig;
   private api: API;
   private container: HTMLDivElement | null = null;
   private readOnly: boolean;
   private block: BlockAPI;
+  private _data: UploadVideoToolData = {
+    url: "",
+    caption: "",
+    withBorder: false,
+    withBackground: false,
+    stretched: false,
+    withCaption: false,
+  };
 
   private containerClassName = "upload-video";
 
@@ -74,16 +81,7 @@ export default class UploadVideoTool implements BlockTool {
     readOnly,
     block,
   }: UploadVideoToolConstructorOptions) {
-    this._data = {
-      url: "",
-      caption: "",
-      withBorder: false,
-      withBackground: false,
-      stretched: false,
-      withCaption: false,
-    };
-    this.data = data;
-
+    this.block = block;
     this.config = {
       ...config,
       uploader:
@@ -94,10 +92,28 @@ export default class UploadVideoTool implements BlockTool {
       allowCaption:
         typeof config?.allowCaption === "boolean" ? config.allowCaption : true,
     };
-
     this.api = api;
     this.readOnly = readOnly;
-    this.block = block;
+
+    this.data = data;
+  }
+
+  /**
+   * Stores all Tool's data
+   * @param data - data in Video Upload Tool format
+   */
+  private set data(data: UploadVideoToolData) {
+    this._data.url = data.url;
+    this._data.caption = data.caption;
+
+    this._setAllTunesByData(data);
+  }
+
+  /**
+   * Return Tool data
+   */
+  private get data(): UploadVideoToolData {
+    return this._data;
   }
 
   /**
@@ -215,24 +231,6 @@ export default class UploadVideoTool implements BlockTool {
     }));
 
     return enrichedTunes;
-  }
-
-  /**
-   * Stores all Tool's data
-   * @param data - data in Image Tool format
-   */
-  private set data(data: UploadVideoToolData) {
-    this._data.url = data.url;
-    this._data.caption = data.caption || "";
-
-    this._setAllTunesByData(data);
-  }
-
-  /**
-   * Return Tool data
-   */
-  private get data(): UploadVideoToolData {
-    return this._data;
   }
 
   private _showUploadButton(): void {
@@ -403,7 +401,6 @@ export default class UploadVideoTool implements BlockTool {
     } else if (tuneName === "stretched") {
       // Wait until the API is ready
       queueMicrotask(() => {
-        if (this.config.allowCaption) this._toggleTuneClass(tuneName, value);
         this.block.stretched = value;
         this._toggleTuneClass(tuneName, value);
       });

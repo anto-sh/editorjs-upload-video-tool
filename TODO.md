@@ -15,6 +15,7 @@
 # Refactor
 
 - [ ] UI manipulation module or at least move frequently used elements to class properies
+- [ ] Use id instead of class in query selectors?
 
 # Guide
 

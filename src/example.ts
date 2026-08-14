@@ -36,7 +36,7 @@ export const editor = new EditorJS({
         id: "hZAjSnqYMX",
         type: "upload-video",
         data: {
-          // url: "src/assets/example.mp4",
+          url: "src/assets/example.mp4",
           withBorder: true,
           withBackground: true,
           stretched: false,

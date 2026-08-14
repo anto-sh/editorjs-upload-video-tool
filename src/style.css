@@ -33,8 +33,9 @@
   }
 
   .upload-video__caption {
-    display: none;
-    margin-bottom: 10px;
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
 
     &[contentEditable="true"][data-placeholder]::before {
       position: absolute !important;
@@ -81,7 +82,10 @@
 
   &.upload-video--withCaption {
     .upload-video__caption {
-      display: block;
+      position: relative;
+      visibility: visible;
+      pointer-events: all;
+      margin-bottom: 10px;
     }
   }
 
