@@ -226,6 +226,7 @@ export default class UploadVideoTool implements BlockTool {
 
     const enrichedTunes = availableTunes.map((t) => ({
       ...t,
+      label: this.api.i18n.t(t.title),
       isActive: isActive(t.name),
       onActivate: () => this._setTune(t.name, !isActive(t.name)),
     }));
