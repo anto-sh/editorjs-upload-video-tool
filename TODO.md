@@ -7,6 +7,7 @@
 - [ ] Error handler API
 - [ ] Poster tune with config option `allowPoster`
 - [ ] Caption length limit
+- [ ] Option to use default library implemented uploader function with just string endpoint?
 
 # Optional
 
@@ -14,7 +15,7 @@
 
 # Refactor
 
-- [ ] UI manipulation module or at least move frequently used elements to class properies?
+- [ ] UI manipulation module or at least move frequently used elements to class properties?
 - [x] Use id instead of class in query selectors? No, negative impact on SEO
 
 # Guide
