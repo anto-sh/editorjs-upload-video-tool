@@ -41,6 +41,7 @@ export type UploadVideoToolFeatureFlagsConfig = {
   border?: boolean;
   background?: boolean;
   stretch?: boolean;
+  chooseFileOnInit?: boolean;
 };
 
 /**
@@ -109,6 +110,7 @@ export default class UploadVideoTool implements BlockTool {
         background: getFeatureFlagValue("background"),
         stretch: getFeatureFlagValue("stretch"),
         caption: getFeatureFlagValue("caption"),
+        chooseFileOnInit: getFeatureFlagValue("chooseFileOnInit"),
       },
     };
     this.api = api;
@@ -257,6 +259,16 @@ export default class UploadVideoTool implements BlockTool {
     }));
 
     return enrichedTunes;
+  }
+
+  /**
+   * Fires after clicks on the Toolbox Video Upload Icon
+   * Initiates file dialog
+   */
+  public rendered(): void {
+    queueMicrotask(() => {
+      if (this.config.featureFlags?.chooseFileOnInit) this._triggerFileDialog();
+    });
   }
 
   private _showUploadButton(): void {
@@ -421,11 +433,11 @@ export default class UploadVideoTool implements BlockTool {
 
     switch (tuneName) {
       case "withBorder":
-      // Wait until the API is ready
-      queueMicrotask(() => {
+        // Wait until the API is ready
+        queueMicrotask(() => {
           if (this.config.featureFlags?.border)
             this._toggleTuneClass(tuneName, value);
-      });
+        });
         break;
 
       case "withBackground":
@@ -436,9 +448,9 @@ export default class UploadVideoTool implements BlockTool {
         break;
 
       case "stretched":
-      queueMicrotask(() => {
+        queueMicrotask(() => {
           if (this.config.featureFlags?.stretch) {
-        this.block.stretched = value;
+            this.block.stretched = value;
             this._toggleTuneClass(tuneName, value);
           }
         });
