@@ -105,7 +105,11 @@ const editor = new EditorJS({
 | `caption`          | `true`  | Show the "With caption" tune.                                          |
 | `chooseFileOnInit` | `true`  | Automatically open the file picker right after the new Block is added. |
 
-> **Note:** Turning a tune off via `featureFlags` only hides it from the settings menu and skips its visual styling — it doesn't clear the tune's value from the saved data. A caption saved while `withCaption: true` stays in the output even after you set `featureFlags.caption: false`; only toggling the tune itself off (`withCaption: false`) drops it. The same applies to `withBorder`, `withBackground`, and `stretched`.
+> **Note:**
+> Turning a tune off via `featureFlags` only hides it from the settings menu and skips its visual styling — it doesn't clear the tune's value from the saved data.
+> A caption saved while `withCaption: true` stays in the output even after you set `featureFlags.caption: false`.
+> Only toggling the tune itself off (`withCaption: false`) drops it.
+> The same applies to `withBorder`, `withBackground`, and `stretched`.
 
 ```javascript
 config: {
