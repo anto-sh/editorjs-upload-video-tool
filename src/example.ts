@@ -26,6 +26,14 @@ export const editor = new EditorJS({
         uploadFailedText: "Oh noooo, the upload failed(((",
         videoAcceptFormats: ["video/mp4", ".ogg"],
         allowCaption: true,
+        featureFlags: {
+          // all true by default
+          // border: true,
+          // background: true,
+          // stretch: true,
+          // caption: true,
+          // chooseFileOnInit: true,
+        },
       } as UploadVideoToolConfig,
     },
   },
