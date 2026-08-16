@@ -36,6 +36,13 @@ export type VideoAcceptFormatItem =
   | `video/${SupportedVideoFormats}`
   | `.${SupportedVideoFormats}`;
 
+export type UploadVideoToolFeatureFlagsConfig = {
+  caption?: boolean;
+  border?: boolean;
+  background?: boolean;
+  stretch?: boolean;
+};
+
 /**
  * Tool config.
  * uploader is a required function called when a file is selected.
@@ -43,13 +50,13 @@ export type VideoAcceptFormatItem =
 export interface UploadVideoToolConfig extends ToolConfig {
   uploader: (file: File) => Promise<{ url: string; [key: string]: any }>;
   errorHandler?: (e: Error) => void;
-  allowCaption?: boolean;
   videoAcceptFormats?: VideoAcceptFormatItem[];
   uploadButtonText?: string;
   changeVideoButtonText?: string;
   videoCaptionPlaceholder?: string;
   uploaderReturnNoUrlText?: string;
   uploadFailedText?: string;
+  featureFlags?: UploadVideoToolFeatureFlagsConfig;
 }
 
 type UploadVideoToolConstructorOptions = BlockToolConstructorOptions<
@@ -82,6 +89,14 @@ export default class UploadVideoTool implements BlockTool {
     block,
   }: UploadVideoToolConstructorOptions) {
     this.block = block;
+
+    const getFeatureFlagValue = (
+      flagName: keyof UploadVideoToolFeatureFlagsConfig,
+    ) => {
+      return typeof config?.featureFlags?.[flagName] === "boolean"
+        ? config?.featureFlags?.[flagName]
+        : true;
+    };
     this.config = {
       ...config,
       uploader:
@@ -89,8 +104,12 @@ export default class UploadVideoTool implements BlockTool {
         (() => {
           throw new Error("No uploader specified!");
         }),
-      allowCaption:
-        typeof config?.allowCaption === "boolean" ? config.allowCaption : true,
+      featureFlags: {
+        border: getFeatureFlagValue("border"),
+        background: getFeatureFlagValue("background"),
+        stretch: getFeatureFlagValue("stretch"),
+        caption: getFeatureFlagValue("caption"),
+      },
     };
     this.api = api;
     this.readOnly = readOnly;
@@ -220,7 +239,13 @@ export default class UploadVideoTool implements BlockTool {
     };
 
     const availableTunes = UploadVideoTool.tunes.filter((t) => {
-      if (t.name === "withCaption") return this.config.allowCaption;
+      if (t.name === "withBorder") return this.config.featureFlags?.border;
+      else if (t.name === "withBackground")
+        return this.config.featureFlags?.background;
+      else if (t.name === "stretched") return this.config.featureFlags?.stretch;
+      else if (t.name === "withCaption")
+        return this.config.featureFlags?.caption;
+
       return true;
     });
 
@@ -394,19 +419,40 @@ export default class UploadVideoTool implements BlockTool {
   private _setTune(tuneName: keyof UploadVideoToolData, value: boolean) {
     this.data[tuneName] = value;
 
-    if (tuneName === "withCaption") {
+    switch (tuneName) {
+      case "withBorder":
       // Wait until the API is ready
       queueMicrotask(() => {
-        if (this.config.allowCaption) this._toggleTuneClass(tuneName, value);
+          if (this.config.featureFlags?.border)
+            this._toggleTuneClass(tuneName, value);
       });
-    } else if (tuneName === "stretched") {
-      // Wait until the API is ready
+        break;
+
+      case "withBackground":
+        queueMicrotask(() => {
+          if (this.config.featureFlags?.background)
+            this._toggleTuneClass(tuneName, value);
+        });
+        break;
+
+      case "stretched":
       queueMicrotask(() => {
+          if (this.config.featureFlags?.stretch) {
         this.block.stretched = value;
+            this._toggleTuneClass(tuneName, value);
+          }
+        });
+        break;
+      case "withCaption":
+        queueMicrotask(() => {
+          if (this.config.featureFlags?.caption)
+            this._toggleTuneClass(tuneName, value);
+        });
+        break;
+
+      default:
         this._toggleTuneClass(tuneName, value);
-      });
-    } else {
-      this._toggleTuneClass(tuneName, value);
+        break;
     }
   }
 
