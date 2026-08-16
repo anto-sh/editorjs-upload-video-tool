@@ -10,14 +10,17 @@
 
 # Optional
 
-- [x] Config option for the upload input accept value - `videoAcceptFormats`
+- [x] Config option for the upload input accept value - `videoAcceptFormats`.
 
 # Refactor
 
-- [ ] UI manipulation module or at least move frequently used elements to class properies
-- [ ] Use id instead of class in query selectors?
+- [ ] UI manipulation module or at least move frequently used elements to class properies?
+- [x] Use id instead of class in query selectors? No, negative impact on SEO
 
 # Guide
 
-- [ ] `AllowCaption` option - `allowCaption` option in config has no effect on saved `caption` data, only on availability of the tune and displaying the caption HTML element,
-      unlike `withCaption` from block data, which set `caption` to undefined on save if `withCaption` equals false or falsy
+- [ ] `featureFlags` options - every option of tunes in `featureFlags` of config has no effect on saved tune data in `data`, only on availability of the tune and displaying its effect in editor.
+
+# Proposed logic shifts
+
+- [ ] Add vanish of disabled feature values from data on save? Like `withBorder` to `null` or `undefined` when `border` option is off in `featureFlags`.
