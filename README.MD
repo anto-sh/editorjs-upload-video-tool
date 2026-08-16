@@ -97,13 +97,15 @@ const editor = new EditorJS({
 
 ### `featureFlags`
 
-| Flag               | Default | Description                                                           |
-| ------------------ | ------- | --------------------------------------------------------------------- |
-| `border`           | `true`  | Show the "With border" tune.                                          |
-| `background`       | `true`  | Show the "With background" tune.                                      |
-| `stretch`          | `true`  | Show the "Stretch video" tune.                                        |
-| `caption`          | `true`  | Show the "With caption" tune.                                         |
-| `chooseFileOnInit` | `true`  | Automatically open the file picker right after the Block is rendered. |
+| Flag               | Default | Description                                                            |
+| ------------------ | ------- | ---------------------------------------------------------------------- |
+| `border`           | `true`  | Show the "With border" tune.                                           |
+| `background`       | `true`  | Show the "With background" tune.                                       |
+| `stretch`          | `true`  | Show the "Stretch video" tune.                                         |
+| `caption`          | `true`  | Show the "With caption" tune.                                          |
+| `chooseFileOnInit` | `true`  | Automatically open the file picker right after the new Block is added. |
+
+> **Note:** Turning a tune off via `featureFlags` only hides it from the settings menu and skips its visual styling — it doesn't clear the tune's value from the saved data. A caption saved while `withCaption: true` stays in the output even after you set `featureFlags.caption: false`; only toggling the tune itself off (`withCaption: false`) drops it. The same applies to `withBorder`, `withBackground`, and `stretched`.
 
 ```javascript
 config: {
@@ -114,8 +116,6 @@ config: {
   },
 }
 ```
-
-> **Note:** `chooseFileOnInit` opens the file picker every time the Block is rendered — that includes when a document containing an already-uploaded video is loaded, not just when a fresh Block is added from the toolbox. Set it to `false` if you don't want the dialog popping up on existing content.
 
 ## Tool's settings (tunes)
 
@@ -157,13 +157,69 @@ A Block without a `url` is treated as invalid and is dropped from the saved outp
 
 ## Styling
 
-Class names follow BEM (`upload-video`, `upload-video__video`, `upload-video__video-container`, `upload-video__caption`, ...). Override these CSS custom properties to re-theme the tool:
+Here's the full list of CSS custom properties and classes you can override to customize the tool's look.
+Class names follow BEM.
+
+#### Variables
+
+CSS custom properties for quick re-theming.
+
+| Variable         | Default   | Used for                                                                              |
+| ---------------- | --------- | ------------------------------------------------------------------------------------- |
+| `--bg-color`     | `#cdd1e0` | Loading indicator background; video container background when "With background" is on |
+| `--front-color`  | `#388ae5` | Loading indicator icon color                                                          |
+| `--border-color` | `#e8e8eb` | Video container border when "With border" is on, and while a file is uploading        |
 
 ```css
 .upload-video {
   --bg-color: #cdd1e0;
   --front-color: #388ae5;
   --border-color: #e8e8eb;
+}
+```
+
+#### Elements
+
+Main structural classes of the Block.
+
+| Class                              | Applied to                         | Description                                                              |
+| ---------------------------------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| `.upload-video`                    | Root Block container               | Top-level wrapper; hosts the CSS custom properties and modifier classes. |
+| `.upload-video__video-container`   | `<div>` wrapping the video         | Positions the video and the loading indicator.                           |
+| `.upload-video__video`             | `<video>`                          | The rendered video element.                                              |
+| `.upload-video__loading-indicator` | `<div>` inside the video container | Spinner overlay shown while `uploader` is running.                       |
+| `.upload-video__caption`           | `<div contenteditable>`            | The editable caption field.                                              |
+| `.upload-video__upload-btn`        | Initial upload button              | Shown before any video is uploaded.                                      |
+| `.upload-video__change-btn`        | "Change Video" button              | Shown under an already-uploaded video.                                   |
+| `.upload-video__loader-btn`        | Both `upload-btn` and `change-btn` | Shared class used to hide the buttons while uploading.                   |
+
+#### Modifiers
+
+Added to the root `.upload-video` container.
+
+| Class                           | Added when                         |
+| ------------------------------- | ---------------------------------- |
+| `.upload-video--withBorder`     | The "With border" tune is on       |
+| `.upload-video--withBackground` | The "With background" tune is on   |
+| `.upload-video--stretched`      | The "Stretch video" tune is on     |
+| `.upload-video--withCaption`    | The "With caption" tune is on      |
+| `.upload-video--uploading`      | A file is currently being uploaded |
+
+For example, a dark theme that also tightens the background padding and italicizes the caption:
+
+```css
+.upload-video {
+  --bg-color: #2a2d3a;
+  --front-color: #7dd3fc;
+  --border-color: #3f4257;
+}
+
+.upload-video--withBackground .upload-video__video-container {
+  padding: 8px;
+}
+
+.upload-video__caption {
+  font-style: italic;
 }
 ```
 
