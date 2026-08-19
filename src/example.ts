@@ -10,22 +10,22 @@ export const editor = new EditorJS({
       class: UploadVideoTool,
       inlineToolbar: true,
       config: {
+        // Either this
         uploader: (file: File): Promise<{ url: string }> =>
           new Promise((resolve) =>
             setTimeout(() => {
               resolve({ url: "src/assets/example.mp4" });
             }, 5000),
           ),
-        errorHandler: (error: Error) => {
-          console.log(error);
+        // or this
+        byEndpoint: {
+          url: "api.example.com/upload",
+          // fileFieldName: "video"
+          // withCredentials: ""
+          // additionalRequestHeaders: {},
+          // additionalRequestData: {},
         },
-        uploadButtonText: "Upload brand new video",
-        changeVideoButtonText: "Wanna change video?",
-        videoCaptionPlaceholder: "Video caption, leave blank for no caption",
-        uploaderReturnNoUrlText: "Uploader didn't do it's job",
-        uploadFailedText: "Oh noooo, the upload failed(((",
         videoAcceptFormats: ["video/mp4", ".ogg"],
-        allowCaption: true,
         featureFlags: {
           // all true by default
           // border: true,
@@ -34,6 +34,14 @@ export const editor = new EditorJS({
           // caption: true,
           // chooseFileOnInit: true,
         },
+        errorHandler: (error: Error) => {
+          console.log(error);
+        },
+        uploadButtonText: "Upload brand new video",
+        changeVideoButtonText: "Wanna change video?",
+        videoCaptionPlaceholder: "Video caption, leave blank for no caption",
+        uploaderReturnNoUrlText: "Uploader didn't do it's job",
+        uploadFailedText: "Oh noooo, the upload failed(((",
       } as UploadVideoToolConfig,
     },
   },

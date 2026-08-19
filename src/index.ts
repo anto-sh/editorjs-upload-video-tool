@@ -31,7 +31,7 @@ export interface UploadVideoToolData extends BlockToolData {
 }
 
 export type SupportedVideoFormats = "mp4" | "webm" | "ogg";
-// Video accept formats for <video> tag accept attribute
+// Video accept formats for <video> tag accept attribute and file validation
 export type VideoAcceptFormatItem =
   | `video/${SupportedVideoFormats}`
   | `.${SupportedVideoFormats}`;
@@ -45,19 +45,34 @@ export type UploadVideoToolFeatureFlagsConfig = {
 };
 
 /**
+ * `byEndpoint` option config
+ * You can't use an additional `Content-Type` header, it'll be vanished
+ */
+export type UploadVideoToolByEndpointConfig = {
+  url: string;
+  fileFieldName?: string;
+  credentials?: RequestCredentials;
+  additionalRequestHeaders?: HeadersInit;
+  additionalRequestData?: Record<string, string>;
+};
+
+/**
  * Tool config.
- * uploader is a required function called when a file is selected.
+ * `uploader` function called when a file is selected.
+ * If uploader in undenfined, then tool uses `byEndpoint` config with required `url` to upload file.
+ * Else you got an error.
  */
 export interface UploadVideoToolConfig extends ToolConfig {
-  uploader: (file: File) => Promise<{ url: string; [key: string]: any }>;
-  errorHandler?: (e: Error) => void;
+  uploader?: (file: File) => Promise<{ url: string; [key: string]: any }>;
+  byEndpoint?: UploadVideoToolByEndpointConfig;
   videoAcceptFormats?: VideoAcceptFormatItem[];
+  featureFlags?: UploadVideoToolFeatureFlagsConfig;
+  errorHandler?: (e: Error) => void;
   uploadButtonText?: string;
   changeVideoButtonText?: string;
   videoCaptionPlaceholder?: string;
   uploaderReturnNoUrlText?: string;
   uploadFailedText?: string;
-  featureFlags?: UploadVideoToolFeatureFlagsConfig;
 }
 
 type UploadVideoToolConstructorOptions = BlockToolConstructorOptions<
@@ -100,11 +115,6 @@ export default class UploadVideoTool implements BlockTool {
     };
     this.config = {
       ...config,
-      uploader:
-        config?.uploader ||
-        (() => {
-          throw new Error("No uploader specified!");
-        }),
       featureFlags: {
         border: getFeatureFlagValue("border"),
         background: getFeatureFlagValue("background"),
@@ -301,37 +311,29 @@ export default class UploadVideoTool implements BlockTool {
       const file = input.files?.[0];
       if (!file) return;
 
-      let newVideoContainer;
-
       try {
         this.container?.classList.add(`${this.containerClassName}--uploading`);
-
         const oldVideoContainer = this.container.querySelector<HTMLDivElement>(
           `.${this.containerClassName}__video-container`,
         );
         if (!oldVideoContainer) {
-          newVideoContainer = this._insertVideoContainer();
-          if (!newVideoContainer) throw new Error("No video container!");
+          var newVideoContainer = this._insertVideoContainer();
+          if (!newVideoContainer)
+            throw new Error(this.api.i18n.t("No video container!"));
           this.container?.prepend(newVideoContainer);
         }
 
-        const result = await this.config.uploader(file);
-
-        if (!result?.url) {
-          throw new Error(
-            this.api.i18n.t(
-              this.config.uploaderReturnNoUrlText || "Uploader returned no URL",
-            ),
-          );
-        }
-
-        this.data.url = result.url;
-        this._showVideo(result.url);
+        const videoUrl = await this._uploadVideo(file);
+        this._showVideo(videoUrl);
       } catch (error) {
         if (newVideoContainer) newVideoContainer.remove();
         if (this.config.errorHandler) this.config.errorHandler(error as Error);
         else {
-          alert(this.config.uploadFailedText || "Upload failed.");
+          alert(
+            this.api.i18n.t(
+              this.config.uploadFailedText || "Upload failed.\n" + error,
+            ),
+          );
           throw error;
         }
       } finally {
@@ -342,6 +344,63 @@ export default class UploadVideoTool implements BlockTool {
     };
 
     input.click();
+  }
+
+  private async _uploadVideo(file: File) {
+    let result;
+    if (this.config.uploader) {
+      result = await this.config.uploader(file);
+    } else if (this.config.byEndpoint?.url) {
+      result = await this._defaultUploader(file);
+    } else
+      throw new Error(
+        this.api.i18n.t(
+          "Config error: neither 'uploader' nor 'byEndpoint.url' is defined.",
+        ),
+      );
+
+    if (!result?.url) {
+      throw new Error(
+        this.api.i18n.t(
+          this.config.uploaderReturnNoUrlText || "Uploader returned no URL",
+        ),
+      );
+    }
+
+    this.data.url = result.url;
+    return result.url;
+  }
+
+  private async _defaultUploader(file: File) {
+    const formData = new FormData();
+    formData.append(this.config.byEndpoint?.fileFieldName || "video", file);
+
+    const additionalRequestData = this.config.byEndpoint?.additionalRequestData;
+    if (additionalRequestData) {
+      Object.entries(additionalRequestData).forEach(([key, value]) => {
+        if (key) formData.append(key, value);
+      });
+    }
+
+    const additionalRequestHeaders = new Headers(
+      this.config.byEndpoint?.additionalRequestHeaders,
+    );
+    // To prevent the loss of the unique FormData boundary
+    additionalRequestHeaders.delete("content-type");
+
+    const response = await fetch(this.config.byEndpoint?.url!, {
+      method: "POST",
+      headers: additionalRequestHeaders,
+      body: formData,
+      credentials: this.config.byEndpoint?.credentials,
+    });
+
+    if (!response.ok)
+      throw new Error(
+        this.api.i18n.t(this.config.uploadFailedText || "Upload failed."),
+      );
+
+    return response.json();
   }
 
   private _showVideo(url: string): void {

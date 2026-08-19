@@ -7,7 +7,9 @@
 - [ ] Error handler API
 - [ ] Poster tune with config option `allowPoster`
 - [ ] Caption length limit
-- [ ] Option to use default library implemented uploader function with just string endpoint?
+- [x] Option to use default library implemented uploader function with just string endpoint?
+- [ ] Progress bar ?
+- [ ] Upload abortion ?
 
 # Optional
 
@@ -20,8 +22,8 @@
 
 # Guide
 
-- [ ] `featureFlags` options - every option of tunes in `featureFlags` of config has no effect on saved tune data in `data`, only on availability of the tune and displaying its effect in editor.
+- [x] `featureFlags` options - every option of tunes in `featureFlags` of config has no effect on saved tune data in `data`, only on availability of the tune and displaying its effect in editor.
 
 # Proposed logic shifts
 
-- [ ] Add vanish of disabled feature values from data on save? Like `withBorder` to `null` or `undefined` when `border` option is off in `featureFlags`.
+- [ ] Vanishing of disabled feature values from data on save? Like `withBorder` to `null` or `undefined` when `border` option is off in `featureFlags`.
