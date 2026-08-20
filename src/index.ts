@@ -72,13 +72,15 @@ export interface UploadVideoToolConfig extends ToolConfig {
   videoAcceptFormats?: VideoAcceptFormatItem[];
   featureFlags?: UploadVideoToolFeatureFlagsConfig;
   errorHandler?: (e: Error) => void;
-  uploadButtonText?: string;
-  changeVideoButtonText?: string;
-  videoCaptionPlaceholder?: string;
-  uploaderReturnedNoUrlText?: string;
-  uploadFailedText?: string;
-  wrongFileTypeText?: string;
-  fileTooLargeText?: string;
+  texts?: {
+    uploadButtonText?: string;
+    changeVideoButtonText?: string;
+    videoCaptionPlaceholder?: string;
+    uploaderReturnedNoUrlText?: string;
+    uploadFailedText?: string;
+    wrongFileTypeText?: string;
+    fileTooLargeText?: string;
+  };
 }
 
 type UploadVideoToolConstructorOptions = BlockToolConstructorOptions<
@@ -183,7 +185,7 @@ export default class UploadVideoTool implements BlockTool {
     else {
       alert(
         this.api.i18n.t(
-          this.config.uploadFailedText || "Upload failed.\n" + error,
+          this.config.texts?.uploadFailedText || "Upload failed.\n" + error,
         ),
       );
       throw error;
@@ -350,7 +352,7 @@ export default class UploadVideoTool implements BlockTool {
     btn.classList.add(`${this.containerClassName}__loader-btn`);
     btn.classList.add(`${this.containerClassName}__upload-btn`);
     btn.textContent = this.api.i18n.t(
-      this.config.uploadButtonText || "Upload Video",
+      this.config.texts?.uploadButtonText || "Upload Video",
     );
     btn.classList.add(this.api.styles.button);
     btn.addEventListener("click", () => this._triggerFileDialog());
@@ -427,7 +429,7 @@ export default class UploadVideoTool implements BlockTool {
 
     if (!isValidType) {
       return this.api.i18n.t(
-        this.config.wrongFileTypeText || "Unsupported video format",
+        this.config.texts?.wrongFileTypeText || "Unsupported video format",
       );
     }
 
@@ -436,7 +438,7 @@ export default class UploadVideoTool implements BlockTool {
       file.size > this.config.maxFileSize
     ) {
       return this.api.i18n.t(
-        this.config.fileTooLargeText || "Video is too large",
+        this.config.texts?.fileTooLargeText || "Video is too large",
       );
     }
 
@@ -477,7 +479,8 @@ export default class UploadVideoTool implements BlockTool {
     if (!result?.url || typeof result.url !== "string") {
       throw new Error(
         this.api.i18n.t(
-          this.config.uploaderReturnedNoUrlText || "Uploader returned no URL",
+          this.config.texts?.uploaderReturnedNoUrlText ||
+            "Uploader returned no URL",
         ),
       );
     }
@@ -511,7 +514,9 @@ export default class UploadVideoTool implements BlockTool {
 
     if (!response.ok)
       throw new Error(
-        this.api.i18n.t(this.config.uploadFailedText || "Upload failed."),
+        this.api.i18n.t(
+          this.config.texts?.uploadFailedText || "Upload failed.",
+        ),
       );
 
     return response.json();
@@ -542,7 +547,7 @@ export default class UploadVideoTool implements BlockTool {
       caption.setAttribute(
         "data-placeholder",
         this.api.i18n.t(
-          this.config.videoCaptionPlaceholder || "Caption for video",
+          this.config.texts?.videoCaptionPlaceholder || "Caption for video",
         ),
       );
     }
@@ -560,7 +565,7 @@ export default class UploadVideoTool implements BlockTool {
     if (!this.readOnly) {
       const changeBtn = document.createElement("div");
       changeBtn.textContent = this.api.i18n.t(
-        this.config.changeVideoButtonText || "Change Video",
+        this.config.texts?.changeVideoButtonText || "Change Video",
       );
 
       changeBtn.classList.add(`${this.containerClassName}__loader-btn`);
