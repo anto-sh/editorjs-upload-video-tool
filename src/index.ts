@@ -162,6 +162,41 @@ export default class UploadVideoTool implements BlockTool {
     };
   }
 
+  public render(): HTMLDivElement {
+    this.container = document.createElement("div");
+    this.container.classList.add(this.api.styles.block);
+    this.container.classList.add(this.containerClassName);
+
+    if (this.data.url) {
+      this._showVideo(this.data.url);
+    } else {
+      if (!this.readOnly) this._showUploadButton();
+    }
+
+    this._setAllTunesByData(this.data);
+
+    return this.container;
+  }
+
+  public save(blockContent: HTMLDivElement): UploadVideoToolData {
+    return {
+      ...this.data,
+      url: blockContent?.querySelector("video")?.src.trim(),
+      caption: this.data.withCaption
+        ? blockContent
+            ?.querySelector<HTMLDivElement>("#caption")
+            ?.innerHTML.trim() || undefined
+        : undefined,
+    };
+  }
+
+  validate(savedData: UploadVideoToolData) {
+    if (!savedData.url) {
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Get Tool toolbox settings
    * icon - Tool icon's SVG
@@ -204,41 +239,6 @@ export default class UploadVideoTool implements BlockTool {
         toggle: true,
       },
     ] as const;
-  }
-
-  public render(): HTMLDivElement {
-    this.container = document.createElement("div");
-    this.container.classList.add(this.api.styles.block);
-    this.container.classList.add(this.containerClassName);
-
-    if (this.data.url) {
-      this._showVideo(this.data.url);
-    } else {
-      if (!this.readOnly) this._showUploadButton();
-    }
-
-    this._setAllTunesByData(this.data);
-
-    return this.container;
-  }
-
-  public save(blockContent: HTMLDivElement): UploadVideoToolData {
-    return {
-      ...this.data,
-      url: blockContent?.querySelector("video")?.src.trim(),
-      caption: this.data.withCaption
-        ? blockContent
-            ?.querySelector<HTMLDivElement>("#caption")
-            ?.innerHTML.trim() || undefined
-        : undefined,
-    };
-  }
-
-  validate(savedData: UploadVideoToolData) {
-    if (!savedData.url) {
-      return false;
-    }
-    return true;
   }
 
   public renderSettings(): MenuConfig {
