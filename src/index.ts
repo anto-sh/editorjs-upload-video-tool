@@ -6,6 +6,7 @@ import type {
   BlockToolData,
   BlockTool,
   BlockAPI,
+  PasteConfig,
 } from "@editorjs/editorjs";
 
 import {
@@ -19,6 +20,7 @@ import {
 import type {
   BlockToolConstructorOptions,
   MenuConfig,
+  PasteEvent,
 } from "@editorjs/editorjs/types/tools";
 
 export interface UploadVideoToolData extends BlockToolData {
@@ -50,6 +52,8 @@ export type UploadVideoToolFeatureFlagsConfig = {
  */
 export type UploadVideoToolByEndpointConfig = {
   url: string;
+  // in bytes
+  maxFileSize?: number;
   fileFieldName?: string;
   credentials?: RequestCredentials;
   additionalRequestHeaders?: HeadersInit;
@@ -71,14 +75,26 @@ export interface UploadVideoToolConfig extends ToolConfig {
   uploadButtonText?: string;
   changeVideoButtonText?: string;
   videoCaptionPlaceholder?: string;
-  uploaderReturnNoUrlText?: string;
+  uploaderReturnedNoUrlText?: string;
   uploadFailedText?: string;
+  wrongFileTypeText?: string;
+  fileTooLargeText?: string;
 }
 
 type UploadVideoToolConstructorOptions = BlockToolConstructorOptions<
   UploadVideoToolData,
   UploadVideoToolConfig
 >;
+
+/**
+ * Event detail for file substitution on paste or drag&drop
+ */
+export interface FilePasteEventDetail {
+  /**
+   * Pasted file
+   */
+  file: File;
+}
 
 export default class UploadVideoTool implements BlockTool {
   private config: UploadVideoToolConfig;
@@ -160,6 +176,18 @@ export default class UploadVideoTool implements BlockTool {
       url: false,
       caption: {},
     };
+  }
+
+  private _handleError(error: unknown) {
+    if (this.config.errorHandler) this.config.errorHandler(error as Error);
+    else {
+      alert(
+        this.api.i18n.t(
+          this.config.uploadFailedText || "Upload failed.\n" + error,
+        ),
+      );
+      throw error;
+    }
   }
 
   public render(): HTMLDivElement {
@@ -272,6 +300,38 @@ export default class UploadVideoTool implements BlockTool {
   }
 
   /**
+   * Specify paste substitutes
+   * @see {@link https://github.com/codex-team/editor.js/blob/master/docs/tools.md#paste-handling}
+   */
+  public static get pasteConfig(): PasteConfig {
+    return {
+      /**
+       * Drag n drop file from into the Editor
+       */
+      files: {
+        mimeTypes: ["video/mp4, video/webm, video/ogg"],
+        extensions: ["mp4", "webm", "ogg"],
+      },
+    };
+  }
+
+  /**
+   * Specify paste handlers
+   * @see {@link https://github.com/codex-team/editor.js/blob/master/docs/tools.md#paste-handling}
+   * @param event - editor.js custom paste event
+   *                              {@link https://github.com/codex-team/editor.js/blob/master/types/tools/paste-events.d.ts}
+   */
+  public async onPaste(event: PasteEvent): Promise<void> {
+    switch (event.type) {
+      case "file": {
+        const file = (event.detail as FilePasteEventDetail).file;
+        this._processVideo(file);
+        break;
+      }
+    }
+  }
+
+  /**
    * Fires after clicks on the Toolbox Video Upload Icon
    * Initiates file dialog
    */
@@ -310,43 +370,98 @@ export default class UploadVideoTool implements BlockTool {
       if (!this.container) return;
       const file = input.files?.[0];
       if (!file) return;
-
-      try {
-        this.container?.classList.add(`${this.containerClassName}--uploading`);
-        const oldVideoContainer = this.container.querySelector<HTMLDivElement>(
-          `.${this.containerClassName}__video-container`,
-        );
-        if (!oldVideoContainer) {
-          var newVideoContainer = this._insertVideoContainer();
-          if (!newVideoContainer)
-            throw new Error(this.api.i18n.t("No video container!"));
-          this.container?.prepend(newVideoContainer);
-        }
-
-        const videoUrl = await this._uploadVideo(file);
-        this._showVideo(videoUrl);
-      } catch (error) {
-        if (newVideoContainer) newVideoContainer.remove();
-        if (this.config.errorHandler) this.config.errorHandler(error as Error);
-        else {
-          alert(
-            this.api.i18n.t(
-              this.config.uploadFailedText || "Upload failed.\n" + error,
-            ),
-          );
-          throw error;
-        }
-      } finally {
-        this.container?.classList.remove(
-          `${this.containerClassName}--uploading`,
-        );
-      }
+      await this._processVideo(file);
     };
 
     input.click();
   }
 
-  private async _uploadVideo(file: File) {
+  private async _processVideo(file: File) {
+    if (!this.container) return;
+
+    try {
+      const validationErrorMsg = this._validateVideo(file);
+      if (validationErrorMsg)
+        throw new Error(
+          this.api.i18n.t("Validation error.\n") + validationErrorMsg,
+        );
+
+      // If it's the first upload, we need to mount a new video container
+      // And if error occured, we need to unmount it
+      // So we save it in a var
+      var newVideoContainer = this._showLoadingSpinner();
+      const videoUrl = await this._uploadVideo(file);
+      this.data.url = videoUrl;
+      this._showVideo(videoUrl);
+    } catch (error) {
+      if (newVideoContainer) newVideoContainer.remove();
+      this._handleError(error);
+    } finally {
+      this._hideLoadingSpinner();
+    }
+  }
+
+  private _validateVideo(file: File) {
+    const formats = this.config.videoAcceptFormats?.length
+      ? this.config.videoAcceptFormats
+      : ([
+          "video/mp4",
+          "video/webm",
+          "video/ogg",
+          ".mp4",
+          ".webm",
+          ".ogg",
+        ] as VideoAcceptFormatItem[]);
+
+    const extMatch = formats.some(
+      (f) =>
+        f.startsWith(".") && file.name.toLowerCase().endsWith(f.toLowerCase()),
+    );
+    const mimeMatch = formats.some(
+      (f) => !f.startsWith(".") && f === file.type,
+    );
+
+    // File.type may be an empty string when drag&dropping from some OSes/file managers
+    // In that case we don't reject the file immediately, but fall back to extension-based checking
+    const isValidType = file.type ? mimeMatch || extMatch : extMatch;
+
+    if (!isValidType) {
+      return this.api.i18n.t(
+        this.config.wrongFileTypeText || "Unsupported video format",
+      );
+    }
+
+    if (
+      this.config.byEndpoint?.maxFileSize &&
+      file.size > this.config.maxFileSize
+    ) {
+      return this.api.i18n.t(
+        this.config.fileTooLargeText || "Video is too large",
+      );
+    }
+
+    return null;
+  }
+
+  private _showLoadingSpinner() {
+    this.container?.classList.add(`${this.containerClassName}--uploading`);
+    const oldVideoContainer = this.container?.querySelector<HTMLDivElement>(
+      `.${this.containerClassName}__video-container`,
+    );
+    if (!oldVideoContainer) {
+      var newVideoContainer = this._insertVideoContainer();
+      if (!newVideoContainer)
+        throw new Error(this.api.i18n.t("No video container!"));
+      this.container?.prepend(newVideoContainer);
+    }
+    return newVideoContainer;
+  }
+
+  private _hideLoadingSpinner() {
+    this.container?.classList.remove(`${this.containerClassName}--uploading`);
+  }
+
+  private async _uploadVideo(file: File): Promise<string> {
     let result;
     if (this.config.uploader) {
       result = await this.config.uploader(file);
@@ -359,16 +474,15 @@ export default class UploadVideoTool implements BlockTool {
         ),
       );
 
-    if (!result?.url) {
+    if (!result?.url || typeof result.url !== "string") {
       throw new Error(
         this.api.i18n.t(
-          this.config.uploaderReturnNoUrlText || "Uploader returned no URL",
+          this.config.uploaderReturnedNoUrlText || "Uploader returned no URL",
         ),
       );
     }
 
-    this.data.url = result.url;
-    return result.url;
+    return result.url as string;
   }
 
   private async _defaultUploader(file: File) {
