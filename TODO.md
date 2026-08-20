@@ -6,14 +6,17 @@
 - [ ] Config options - contorls, autoplay, etc.
 - [ ] Error handler API
 - [ ] Poster tune with config option `allowPoster`
-- [ ] Caption length limit
 - [x] Option to use default library implemented uploader function with just string endpoint?
 - [ ] Progress bar ?
 - [ ] Upload abortion ?
+- [x] Validation
+- [x] Drag&Drop, Paste
+- [x] maxFileSize option
 
 # Optional
 
 - [x] Config option for the upload input accept value - `videoAcceptFormats`.
+- [ ] Caption length limit?
 
 # Refactor
 
