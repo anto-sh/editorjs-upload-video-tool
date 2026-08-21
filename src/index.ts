@@ -185,8 +185,10 @@ export default class UploadVideoTool implements BlockTool {
     else {
       alert(
         this.api.i18n.t(
-          this.config.texts?.uploadFailedText || "Upload failed.\n" + error,
-        ),
+          this.config.texts?.uploadFailedText || "Upload failed",
+        ) +
+          ".\n" +
+          error,
       );
       throw error;
     }
@@ -405,7 +407,7 @@ export default class UploadVideoTool implements BlockTool {
       const validationErrorMsg = this._validateVideo(file);
       if (validationErrorMsg)
         throw new Error(
-          this.api.i18n.t("Validation error.\n") + validationErrorMsg,
+          this.api.i18n.t("Validation error") + ".\n" + validationErrorMsg,
         );
 
       // If it's the first upload, we need to mount a new video container
