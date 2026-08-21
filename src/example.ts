@@ -37,11 +37,15 @@ export const editor = new EditorJS({
         errorHandler: (error: Error) => {
           console.log(error);
         },
-        uploadButtonText: "Upload brand new video",
-        changeVideoButtonText: "Wanna change video?",
-        videoCaptionPlaceholder: "Video caption, leave blank for no caption",
-        uploaderReturnNoUrlText: "Uploader didn't do it's job",
-        uploadFailedText: "Oh noooo, the upload failed(((",
+        texts: {
+          uploadButtonText: "Upload brand new video",
+          changeVideoButtonText: "Wanna change video?",
+          videoCaptionPlaceholder: "Video caption, leave blank for no caption",
+          uploaderReturnNoUrlText: "Uploader didn't do it's job",
+          uploadFailedText: "Oh noooo, the upload failed(((",
+          wrongFileTypeText: "Wrong file type(",
+          fileTooLargeText: "Oh no, your file is too large("
+        },
       } as UploadVideoToolConfig,
     },
   },
