@@ -52,8 +52,6 @@ export type UploadVideoToolFeatureFlagsConfig = {
  */
 export type UploadVideoToolByEndpointConfig = {
   url: string;
-  // in bytes
-  maxFileSize?: number;
   fileFieldName?: string;
   credentials?: RequestCredentials;
   additionalRequestHeaders?: HeadersInit;
@@ -70,6 +68,8 @@ export interface UploadVideoToolConfig extends ToolConfig {
   uploader?: (file: File) => Promise<{ url: string; [key: string]: any }>;
   byEndpoint?: UploadVideoToolByEndpointConfig;
   videoAcceptFormats?: VideoAcceptFormatItem[];
+  // in bytes
+  maxFileSize?: number;
   featureFlags?: UploadVideoToolFeatureFlagsConfig;
   errorHandler?: (e: Error) => void;
   texts?: {
@@ -318,6 +318,32 @@ export default class UploadVideoTool implements BlockTool {
   }
 
   /**
+   * Pending chooseFileOnInit dialog trigger, or null if none is scheduled.
+   *
+   * Editor.js calls rendered() before onPaste() when a file is pasted, so a
+   * freshly inserted Block can't yet tell "empty Block from the toolbox" apart
+   * from "paste that's about to deliver a file". This timer delays opening the
+   * file dialog just long enough for onPaste to arrive first and cancel it.
+   *
+   * @see https://github.com/codex-team/editor.js/issues/2065
+   */
+
+  private chooseFileOnInitTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Fires after clicks on the Toolbox Video Upload Icon
+   * Initiates file dialog
+   */
+  public rendered(): void {
+    if (this.config.featureFlags?.chooseFileOnInit) {
+      this.chooseFileOnInitTimer = setTimeout(() => {
+        this.chooseFileOnInitTimer = null;
+        if (!this.data.url) this._triggerFileDialog();
+      }, 50);
+    }
+  }
+
+  /**
    * Specify paste handlers
    * @see {@link https://github.com/codex-team/editor.js/blob/master/docs/tools.md#paste-handling}
    * @param event - editor.js custom paste event
@@ -327,20 +353,14 @@ export default class UploadVideoTool implements BlockTool {
     switch (event.type) {
       case "file": {
         const file = (event.detail as FilePasteEventDetail).file;
-        this._processVideo(file);
+        if (this.chooseFileOnInitTimer !== null) {
+          clearTimeout(this.chooseFileOnInitTimer);
+          this.chooseFileOnInitTimer = null;
+        }
+        await this._processVideo(file);
         break;
       }
     }
-  }
-
-  /**
-   * Fires after clicks on the Toolbox Video Upload Icon
-   * Initiates file dialog
-   */
-  public rendered(): void {
-    queueMicrotask(() => {
-      if (this.config.featureFlags?.chooseFileOnInit) this._triggerFileDialog();
-    });
   }
 
   private _showUploadButton(): void {
@@ -433,10 +453,7 @@ export default class UploadVideoTool implements BlockTool {
       );
     }
 
-    if (
-      this.config.byEndpoint?.maxFileSize &&
-      file.size > this.config.maxFileSize
-    ) {
+    if (this.config.maxFileSize && file.size > this.config.maxFileSize) {
       return this.api.i18n.t(
         this.config.texts?.fileTooLargeText || "Video is too large",
       );
