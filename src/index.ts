@@ -313,7 +313,7 @@ export default class UploadVideoTool implements BlockTool {
        * Drag n drop file from into the Editor
        */
       files: {
-        mimeTypes: ["video/mp4, video/webm, video/ogg"],
+        mimeTypes: ["video/mp4", "video/webm", "video/ogg"],
         extensions: ["mp4", "webm", "ogg"],
       },
     };
@@ -534,7 +534,7 @@ export default class UploadVideoTool implements BlockTool {
     if (!response.ok)
       throw new Error(
         this.api.i18n.t(
-          this.config.texts?.uploadFailedText || "Upload failed.",
+          this.config.texts?.uploadFailedText || "Upload failed",
         ),
       );
 
