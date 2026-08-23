@@ -1,6 +1,6 @@
 {
   "name": "editorjs-upload-video-tool",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Video Block tool for Editor.js that uploads video files — either through your own custom uploader function, or a built-in fetch()-based uploader pointed at a single endpoint",
   "keywords": [
     "editorjs",
