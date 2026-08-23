@@ -1,18 +1,20 @@
 # Upload Video Tool for Editor.js
 
-Video Block tool for [Editor.js](https://editorjs.io) that uploads video files through **your own custom uploader function**.
+Video Block tool for [Editor.js](https://editorjs.io) that uploads video files — either through **your own custom uploader function**, or a built-in `fetch()`-based uploader pointed at a single endpoint.
 
 [![npm version](https://badge.fury.io/js/editorjs-upload-video-tool.svg)](https://www.npmjs.com/package/editorjs-upload-video-tool)
-
-Unlike tools that talk to a fixed backend endpoint, this tool doesn't ship with any upload logic of its own — you provide an `uploader` function and send the file wherever you like (your own server, S3, Cloudinary, Firebase Storage, etc.).
 
 ## Features
 
 - Renders an uploaded video with the native `<video>` element
+- Two ways to upload: a custom `uploader` function, or a built-in `fetch()`-based uploader (`byEndpoint`)
+- Drag & drop and clipboard paste, in addition to the file picker — same upload/validation pipeline
+- Client-side validation: file type/extension and max file size
 - Optional, editable caption
-- Optional tunes: border, background, stretch, caption — each independently toggleable
+- Optional tunes: border, background, stretch, caption — each independently toggleable by config `featureFlags`
 - Read-only mode supported
-- Fully themeable via CSS custom properties
+- Fully themeable via CSS overrides
+- Two combinable ways to localize every UI string — see [Internationalization](#internationalization)
 
 ## Installation
 
@@ -28,6 +30,12 @@ or with yarn:
 yarn add editorjs-upload-video-tool
 ```
 
+or with pnpm:
+
+```shell
+pnpm add editorjs-upload-video-tool
+```
+
 Then include the module in your bundle:
 
 ```javascript
@@ -40,11 +48,18 @@ import UploadVideoTool from "editorjs-upload-video-tool";
 
 ## Usage
 
-Add the tool to the `tools` property of the Editor.js config. The **`uploader`** function is required — it receives the selected `File` and must resolve to an object containing a `url` field.
+Give the tool exactly one of `uploader` or `byEndpoint`. \
+If both are set, `uploader` wins; if neither is set, the tool throws a config error on first upload attempt.
 
-```javascript
+### Option A: custom `uploader`
+
+Receives the selected `File`, must resolve to `{ url: string, ... }`.
+
+```typescript
 import EditorJS from "@editorjs/editorjs";
-import UploadVideoTool from "editorjs-upload-video-tool";
+import UploadVideoTool, {
+  UploadVideoToolConfig,
+} from "editorjs-upload-video-tool";
 
 const editor = new EditorJS({
   tools: {
@@ -65,50 +80,94 @@ const editor = new EditorJS({
           }
 
           const result = await response.json();
-
-          // Must resolve with an object containing `url`.
-          // Any extra fields are accepted but ignored by the tool.
-          return {
-            url: result.url,
-          };
+          return { url: result.url };
         },
         errorHandler: (error) => {
           console.error("Video upload failed:", error);
         },
-      },
+      } as UploadVideoToolConfig,
     },
   },
 });
 ```
 
+> **TS:** cast `config` as `UploadVideoToolConfig` (as above) — Editor.js's own types don't link a tool's `config` to its own config type, so without the cast you get no autocomplete/checking.
+
+### Option B: `byEndpoint`
+
+Skip `uploader`, point `byEndpoint` at your route — the built-in `fetch()` uploader handles the request:
+
+```javascript
+config: {
+  byEndpoint: {
+    url: "https://your-server.com/upload",
+    fileFieldName: "video", // FormData field name, defaults to 'video'
+    credentials: "include", // forwards cookies on cross-origin requests
+    additionalRequestHeaders: {
+      Authorization: "Bearer your-token",
+    },
+    additionalRequestData: {
+      folder: "user-uploads",
+    },
+  },
+}
+```
+
+The endpoint must respond with JSON containing a `url` field — same contract as the custom `uploader`.
+
 ## Config Params
 
-| Field                     | Type                                                                               | Required | Default                                                             | Description                                                                           |
-| ------------------------- | ---------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `uploader`                | `(file: File) => Promise<{ url: string, [key: string]: any }>`                     | **Yes**  | —                                                                   | Called with the selected file. Must resolve to an object with at least a `url` field. |
-| `errorHandler`            | `(error: Error) => void`                                                           | No       | shows `alert()` and re-throws                                       | Called whenever `uploader` throws, rejects, or resolves without a `url`.              |
-| `videoAcceptFormats`      | `Array<'video/mp4' \| 'video/webm' \| 'video/ogg' \| '.mp4' \| '.webm' \| '.ogg'>` | No       | `['video/mp4', 'video/webm', 'video/ogg', '.mp4', '.webm', '.ogg']` | Passed to the hidden file input's `accept` attribute.                                 |
-| `uploadButtonText`        | `string`                                                                           | No       | `'Upload Video'`                                                    | Label of the initial upload button.                                                   |
-| `changeVideoButtonText`   | `string`                                                                           | No       | `'Change Video'`                                                    | Label of the button shown below an uploaded video.                                    |
-| `videoCaptionPlaceholder` | `string`                                                                           | No       | `'Caption for video'`                                               | Placeholder text of the empty caption field.                                          |
-| `uploaderReturnNoUrlText` | `string`                                                                           | No       | `'Uploader returned no URL'`                                        | Error message used when `uploader` resolves without a `url`.                          |
-| `uploadFailedText`        | `string`                                                                           | No       | `'Upload failed.'`                                                  | Message shown by the default `alert()` when no `errorHandler` is supplied.            |
-| `featureFlags`            | `object`                                                                           | No       | all `true`                                                          | Enables/disables individual tunes — see below.                                        |
+| Field                | Type                                                                               | Required                         | Default                                                             | Description                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `uploader`           | `(file: File) => Promise<{ url: string, [key: string]: any }>`                     | One of `uploader` / `byEndpoint` | —                                                                   | Takes priority over `byEndpoint` if both are set.                                    |
+| `byEndpoint`         | `object`                                                                           | One of `uploader` / `byEndpoint` | —                                                                   | Built-in `fetch()` uploader — see [below](#byendpoint).                              |
+| `videoAcceptFormats` | `Array<'video/mp4' \| 'video/webm' \| 'video/ogg' \| '.mp4' \| '.webm' \| '.ogg'>` | No                               | `['video/mp4', 'video/webm', 'video/ogg', '.mp4', '.webm', '.ogg']` | Drives the file dialog's `accept` _and_ validation — see [Validation](#validation).  |
+| `maxFileSize`        | `number` (bytes)                                                                   | No                               | no limit                                                            | Rejects files larger than this before uploading.                                     |
+| `errorHandler`       | `(error: Error) => void`                                                           | No                               | shows `alert()` and re-throws                                       | Called for upload errors _and_ validation failures.                                  |
+| `featureFlags`       | `object`                                                                           | No                               | all `true`                                                          | Enables/disables individual tunes — see below.                                       |
+| `texts`              | `object`                                                                           | No                               | see [below](#texts)                                                 | Overrides individual UI strings — see [Internationalization](#internationalization). |
+
+#### `byEndpoint`
+
+| Field                      | Type                                                          | Required | Default                           | Description                                                                                                                                 |
+| -------------------------- | ------------------------------------------------------------- | -------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`                      | `string`                                                      | **Yes**  | —                                 | The endpoint the file is POSTed to.                                                                                                         |
+| `fileFieldName`            | `string`                                                      | No       | `'video'`                         | `FormData` field name the file is attached under.                                                                                           |
+| `credentials`              | `RequestCredentials` (`'omit' \| 'same-origin' \| 'include'`) | No       | fetch's default (`'same-origin'`) | Passed straight to `fetch`. Use `'include'` for cross-origin cookie sessions.                                                               |
+| `additionalRequestHeaders` | `HeadersInit`                                                 | No       | —                                 | Extra headers, e.g. `Authorization`. `Content-Type`, if present, is stripped automatically — needed for the `multipart/form-data` boundary. |
+| `additionalRequestData`    | `Record<string, string>`                                      | No       | —                                 | Extra string fields appended to the `FormData` body, e.g. a CSRF token.                                                                     |
+
+#### `texts`
+
+All fields are optional strings.
+
+| Field                       | Default                      |
+| --------------------------- | ---------------------------- |
+| `uploadButtonText`          | `'Upload Video'`             |
+| `changeVideoButtonText`     | `'Change Video'`             |
+| `videoCaptionPlaceholder`   | `'Caption for video'`        |
+| `uploaderReturnedNoUrlText` | `'Uploader returned no URL'` |
+| `uploadFailedText`          | `'Upload failed'`            |
+| `wrongFileTypeText`         | `'Unsupported video format'` |
+| `fileTooLargeText`          | `'Video is too large'`       |
 
 ### `featureFlags`
 
-| Flag               | Default | Description                                                            |
-| ------------------ | ------- | ---------------------------------------------------------------------- |
-| `border`           | `true`  | Show the "With border" tune.                                           |
-| `background`       | `true`  | Show the "With background" tune.                                       |
-| `stretch`          | `true`  | Show the "Stretch video" tune.                                         |
-| `caption`          | `true`  | Show the "With caption" tune.                                          |
-| `chooseFileOnInit` | `true`  | Automatically open the file picker right after the new Block is added. |
+| Flag               | Default | Description                                                                 |
+| ------------------ | ------- | --------------------------------------------------------------------------- |
+| `border`           | `true`  | Show the "With border" tune.                                                |
+| `background`       | `true`  | Show the "With background" tune.                                            |
+| `stretch`          | `true`  | Show the "Stretch video" tune.                                              |
+| `caption`          | `true`  | Show the "With caption" tune.                                               |
+| `chooseFileOnInit` | `true`  | Automatically open the file picker right after a new, empty Block is added. |
+
+> **Note:** `chooseFileOnInit` only fires for empty Blocks (skipped if `data.url` is already set), and only actually opens the dialog after a real user gesture — browsers block it otherwise. \
+> Delayed by 50ms to avoid a race with paste / drag & drop ([editor.js#2065](https://github.com/codex-team/editor.js/issues/2065)).
 
 > **Note:**
-> Turning a tune off via `featureFlags` only hides it from the settings menu and skips its visual styling — it doesn't clear the tune's value from the saved data.
-> A caption saved while `withCaption: true` stays in the output even after you set `featureFlags.caption: false`.
-> Only toggling the tune itself off (`withCaption: false`) drops it.
+> Turning a tune off via `featureFlags` only hides it from the settings menu and skips its visual styling — it doesn't clear the tune's value from the saved data.\
+> A caption saved while `withCaption: true` stays in the output even after you set `featureFlags.caption: false`.\
+> Only toggling the tune itself off (`withCaption: false`) drops it.\
 > The same applies to `withBorder`, `withBackground`, and `stretched`.
 
 ```javascript
@@ -120,6 +179,18 @@ config: {
   },
 }
 ```
+
+## Drag & drop and paste
+
+Also works by dragging a file onto the editor or pasting it — goes through the same `uploader`/`byEndpoint`, `videoAcceptFormats`, and `maxFileSize` as the file dialog.
+
+Accepted types for this path are fixed to `.mp4`/`.webm`/`.ogg` regardless of `videoAcceptFormats` (Editor.js's `pasteConfig` is static).\
+The `videoAcceptFormats` validation is still applied when the file reaches the tool.
+
+## Validation
+
+Type is checked against `videoAcceptFormats` — only `mp4`/`webm`/`ogg` are valid, since that's all the `<video>` tag itself supports.\
+Size is checked against `maxFileSize`, if set. Either failure goes through `errorHandler` (or `alert()`), same as an upload error.
 
 ## Tool's settings (tunes)
 
@@ -161,7 +232,7 @@ A Block without a `url` is treated as invalid and is dropped from the saved outp
 
 ## Styling
 
-Here's the full list of CSS custom properties and classes you can override to customize the tool's look.
+Here's the full list of CSS custom properties and classes you can override to customize the tool's look.\
 Class names follow BEM.
 
 #### Variables
@@ -191,7 +262,7 @@ Main structural classes of the Block.
 | `.upload-video`                    | Root Block container               | Top-level wrapper; hosts the CSS custom properties and modifier classes. |
 | `.upload-video__video-container`   | `<div>` wrapping the video         | Positions the video and the loading indicator.                           |
 | `.upload-video__video`             | `<video>`                          | The rendered video element.                                              |
-| `.upload-video__loading-indicator` | `<div>` inside the video container | Spinner overlay shown while `uploader` is running.                       |
+| `.upload-video__loading-indicator` | `<div>` inside the video container | Spinner overlay shown while the upload is running.                       |
 | `.upload-video__caption`           | `<div contenteditable>`            | The editable caption field.                                              |
 | `.upload-video__upload-btn`        | Initial upload button              | Shown before any video is uploaded.                                      |
 | `.upload-video__change-btn`        | "Change Video" button              | Shown under an already-uploaded video.                                   |
@@ -227,9 +298,61 @@ For example, a dark theme that also tightens the background padding and italiciz
 }
 ```
 
+## Internationalization
+
+Two ways to translate strings, freely combinable — `texts` wins when both provide a value for the same string.
+
+**`texts` config field** — covers the 7 fields under [`texts`](#texts):
+
+```javascript
+config: {
+  texts: {
+    uploadButtonText: "Загрузить видео",
+  },
+},
+```
+
+**Editor.js's own i18n dictionary** — covers every string, including tune labels:
+
+```javascript
+i18n: {
+  messages: {
+    tools: {
+      video: { // key must match your tools registration
+        "Upload Video": "Загрузить видео",
+        "With border": "С рамкой",
+      },
+    },
+  },
+},
+```
+
+The toolbox title isn't passed through `t()` — translate it via `toolNames` instead:
+
+```javascript
+i18n: { messages: { toolNames: { "Upload Video": "Загрузить видео" } } },
+```
+
+### All strings passed through `this.api.i18n.t()`
+
+| String                                                               | `texts` field               |
+| -------------------------------------------------------------------- | --------------------------- |
+| `Upload Video`                                                       | `uploadButtonText`          |
+| `Change Video`                                                       | `changeVideoButtonText`     |
+| `Caption for video`                                                  | `videoCaptionPlaceholder`   |
+| `Uploader returned no URL`                                           | `uploaderReturnedNoUrlText` |
+| `Upload failed`                                                      | `uploadFailedText`          |
+| `Unsupported video format`                                           | `wrongFileTypeText`         |
+| `Video is too large`                                                 | `fileTooLargeText`          |
+| `Validation error`                                                   | —                           |
+| `With border` / `With background` / `Stretch video` / `With caption` | —                           |
+| `No video container!`                                                | —                           |
+| `Config error: neither 'uploader' nor 'byEndpoint.url' is defined.`  | —                           |
+
 ## Read-only mode
 
-The tool declares `isReadOnlySupported = true`. In read-only mode the upload/change buttons are hidden and the caption becomes non-editable, while any tunes saved with the data are still applied.
+The tool declares `isReadOnlySupported = true`.\
+In read-only mode the upload/change buttons are hidden and the caption becomes non-editable, while any tunes saved with the data are still applied.
 
 ## License
 
