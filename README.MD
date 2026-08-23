@@ -3,6 +3,7 @@
 Video Block tool for [Editor.js](https://editorjs.io) that uploads video files — either through **your own custom uploader function**, or a built-in `fetch()`-based uploader pointed at a single endpoint.
 
 [![npm version](https://badge.fury.io/js/editorjs-upload-video-tool.svg)](https://www.npmjs.com/package/editorjs-upload-video-tool)
+![](https://badgen.net/badge/Editor.js/v2.31.6/blue)
 [![Socket Badge](https://badge.socket.dev/npm/package/editorjs-upload-video-tool)](https://badge.socket.dev/npm/package/editorjs-upload-video-tool)
 
 ## Features
