@@ -307,7 +307,7 @@ Two ways to translate strings, freely combinable — `texts` wins when both prov
 ```javascript
 config: {
   texts: {
-    uploadButtonText: "Загрузить видео",
+    uploadButtonText: "Upload the video, please",
   },
 },
 ```
@@ -319,8 +319,8 @@ i18n: {
   messages: {
     tools: {
       video: { // key must match your tools registration
-        "Upload Video": "Загрузить видео",
-        "With border": "С рамкой",
+        "Upload Video": "Upload the video, please",
+        "With border": "With outline",
       },
     },
   },
@@ -330,7 +330,7 @@ i18n: {
 The toolbox title isn't passed through `t()` — translate it via `toolNames` instead:
 
 ```javascript
-i18n: { messages: { toolNames: { "Upload Video": "Загрузить видео" } } },
+i18n: { messages: { toolNames: { "Upload Video": "Video" } } },
 ```
 
 ### All strings passed through `this.api.i18n.t()`
